@@ -1,21 +1,107 @@
-import { StatusBar } from 'expo-status-bar';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+import {
+  Image,
+  Platform,
+  SafeAreaView,
+  SliderBase,
+  StatusBar,
+  StyleSheet,
+  UIManager,
+} from 'react-native';
+import React from 'react';
+
+import { createPuzzle } from './utils/puzzle';
+import { getRandomImage } from './utils/api';
+import Game from './screens/Game';
+import Start from './screens/Start';
+
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const BACKGROUND_COLORS = ['#000000', '#000000'];
+
+export default class App extends React.Component {
+  state = {
+    size: 3,
+    puzzle: null,
+    image: null,
+  };
+
+  componentDidMount() {
+    this.preloadNextImage();
+  }
+
+  async preloadNextImage() {
+    const image = await getRandomImage();
+
+    Image.prefetch(image.uri);
+
+    this.setState({ image });
+  }
+
+  handleChangeSize = size => {
+    this.setState({ size });
+  };
+
+  handleStartGame = () => {
+    const { size } = this.state;
+
+    this.setState({ puzzle: createPuzzle(size) });
+  };
+
+  handleGameChange = puzzle => {
+    this.setState({ puzzle });
+  };
+
+  handleQuit = () => {
+    this.setState({ puzzle: null, image: null });
+
+    this.preloadNextImage();
+  };
+
+  render() {
+    const { size, puzzle, image } = this.state;
+
+    return (
+      <LinearGradient style={styles.background} colors={BACKGROUND_COLORS}>
+        <StatusBar barStyle={'light-content'}  />
+        <SafeAreaView style={styles.container}>
+          {!puzzle && (
+            <Start
+              size={size}
+              onStartGame={this.handleStartGame}
+              onChangeSize={this.handleChangeSize}
+            />
+          )}
+          {puzzle && (
+            <Game
+              puzzle={puzzle}
+              image={image}
+              onChange={this.handleGameChange}
+              onQuit={this.handleQuit}
+            />
+          )}
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop:
+      Platform.OS === 'android' || parseInt(Platform.Version, 10) < 11
+        ? Constants.statusBarHeight
+        : 0,
   },
 });
